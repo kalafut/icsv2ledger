@@ -100,6 +100,7 @@ DEFAULTS = dotdict({
     'quiet': False,
     'reverse': False,
     'skip_lines': str(1),
+    'skip_dupes': False,
     'tags': False,
     'delimiter': ',',
     'csv_decimal_comma': False,
@@ -265,6 +266,11 @@ def parse_args_and_config_file():
         type=int,
         help=('number of lines to skip from CSV file'
               ' (default: {0})'.format(DEFAULTS.skip_lines)))
+    parser.add_argument(
+        '--skip-dupes',
+        action='store_true',
+        help=('skip transactions that have already been imported'
+              ' (default: {0})'.format(DEFAULTS.skip_dupes)))
     parser.add_argument(
         '--reverse',
         action='store_true',
@@ -550,7 +556,15 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
 
     return value
 
-
+def csv_from_ledger(ledger_file):
+    pattern = re.compile(r"^\s*[;#]\s*CSV:\s*(.*?)\s*$")
+    csv_comments = set()
+    with open(ledger_file) as f:
+        for line in f:
+            m = pattern.match(line)
+            if m:
+                csv_comments.add(m.group(1))
+    return csv_comments
 
 def payees_from_ledger(ledger_file):
     return from_ledger(ledger_file, 'payees')
@@ -710,6 +724,7 @@ def main():
     if options.ledger_file:
         possible_accounts = accounts_from_ledger(options.ledger_file)
         possible_payees = payees_from_ledger(options.ledger_file)
+        csv_comments = csv_from_ledger(options.ledger_file)
 
     # Read mappings
     mappings = []
@@ -801,6 +816,10 @@ def main():
         for i, row in enumerate(bank_reader):
             # Skip any empty lines in the input
             if len(row) == 0:
+                continue
+
+            # Skip any lines already in the ledger file
+            if options.skip_dupes and csv_lines[options.skip_lines + i].strip() in csv_comments:
                 continue
 
             entry = Entry(row, csv_lines[options.skip_lines + i],
