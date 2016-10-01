@@ -492,8 +492,8 @@ class Entry:
         uuid_regex = re.compile(r"UUID:", re.IGNORECASE)
         uuid = [v for v in tags if uuid_regex.match(v)]
         if uuid:
-          uuid = uuid[0]
-          tags.remove(uuid)
+            uuid = uuid[0]
+            tags.remove(uuid)
         format_data = {
             'date': self.date,
             'effective_date': self.effective_date,
@@ -515,7 +515,12 @@ class Entry:
             'md5sum': self.md5sum,
             'csv': self.raw_csv}
         format_data.update(self.addons)
-        return template.format(**format_data)
+
+        # generate and clean output
+        output_lines = template.format(**format_data).split('\n')
+        output = '\n'.join([x.rstrip() for x in output_lines])
+
+        return output
 
 def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     """
