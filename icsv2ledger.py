@@ -846,7 +846,11 @@ def main():
             entry = Entry(row, csv_lines[options.skip_lines + i],
                           options)
             if (options.skip_older_than < 0) or (entry.days_old <= options.skip_older_than):
-                payee, account, tags = get_payee_and_account(entry)
+                try:
+                    payee, account, tags = get_payee_and_account(entry)
+                except KeyboardInterrupt:
+                    print()
+                    sys.exit(0)
                 line = entry.journal_entry(i + 1, payee, account, tags)
                 if options.incremental:
                     yield line
